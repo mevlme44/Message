@@ -1,15 +1,19 @@
 require('dotenv').config({path: __dirname+'/.env'})
 const PORT = process.env.PORT || 5000
 const WebSocket = require('ws')
-const {json} = require("express");
+const express = require('express')
 const clients = {}
 
+const app = express()
+
+app.use(express.json())
 
 const start = () => {
     try {
         const wss = new WebSocket.WebSocketServer({port: PORT})
         wss.on('connection', onConnect)
-        console.log('Initialized')
+        console.log('[WebSocket] Initialized')
+        app.listen(5051, () => console.log(`[Express] Initialized`))
     } catch (e) {
         console.log(e)
     }
@@ -25,11 +29,10 @@ function onConnect(wsClient) {
 
 function onMessage(message, client) {
     const data = JSON.parse(message)
-    console.log(data)
     switch (data.Header) {
         case 'auth':
             if (clients[data.Fingerprint])
-                client[data.Fingerprint].client = client
+                clients[data.Fingerprint].client = client
             else
                 clients[data.Fingerprint] = {
                     messages: [],
@@ -39,6 +42,9 @@ function onMessage(message, client) {
         case 'message':
             if (!clients[data.Recipient]) {
                 console.log('could not find recipient')
+                data.Header = 'error'
+                data.Message = 'User not found'
+                client.send(JSON.stringify(data))
             }
             else {
                 clients[data.Recipient].messages.push({
@@ -50,5 +56,14 @@ function onMessage(message, client) {
             break
     }
 }
+
+app.get('/getMyMessages/', async (req, res) => {
+    if (clients[req.headers.authorization]){
+        res.send(JSON.stringify(clients[req.headers.authorization].messages))
+    }
+    else {
+        res.send('No messages')
+    }
+})
 start()
 
