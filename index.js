@@ -56,7 +56,7 @@ function onMessage(message, client) {
             break
     }
 }
-
+/// TODO: USE DATABASE FOR MESSAGE STORAGE
 app.get('/getMyMessages/', async (req, res) => {
     if (clients[req.headers.authorization]){
         res.send(JSON.stringify(clients[req.headers.authorization].messages))
